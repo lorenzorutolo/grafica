@@ -1,0 +1,52 @@
+stages:
+  - structure
+  - engine
+  - client
+
+# use official computer graphics image (based on ubuntu 24.04)
+image: gitlab-edu.supsi.ch:5050/dti-isin/labingsw/common:ubuntu2404-cg
+
+structure:
+  # verify project structure
+  stage: structure
+  script:
+    - '[ -d engine ] || exit 1'
+    - '[ -d client ] || exit 1'
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "newClientStructure"
+
+engine:
+  # compile, link and test engine
+  stage: engine
+  before_script:
+    - 'cd engine'
+    - 'apt install libglew-dev -y'
+  script:
+    - 'make clean'      # Clean the build environment
+    - 'make release'    # Build shared library
+    - 'make test'       # Build and run tests (debug build + test runner)
+  after_script:
+    - 'cd ..'
+  artifacts:
+    paths:
+      - engine/bin/Release/libengine.so
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "newClientStructure"
+
+client:
+  # compile and link client
+  stage: client
+  dependencies:
+    - engine
+  before_script:
+    - 'cd client'
+  script:
+    - 'make clean'      # Clean the build environment
+    - 'make release'    # Compile all client components (.o) and link client
+  after_script:
+    - 'cd ..'
+  artifacts:
+    paths:
+      - client/bin/Release/client
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" || $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "newClientStructure"
