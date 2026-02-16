@@ -37,7 +37,6 @@ void Texture2D::render(glm::mat4) {
 
    apply_filter_and_mipmap();
    apply_texture_wrap();
-   //apply_anisotropic_filter();
 }
 
 /* ===== LOAD ===== */

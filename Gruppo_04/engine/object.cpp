@@ -1,4 +1,3 @@
-// Author: Niccolo Pasqualetti, Ivan Martinetti, Mattia Pasquini
 #include "object.h"
 
 //using namespace Eng;

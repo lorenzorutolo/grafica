@@ -249,7 +249,7 @@ Node ENG_API* OvoReader::parse_node(char* data, unsigned int& position, unsigned
 
    unsigned int versionId;
    memcpy(&versionId, data + position, sizeof(unsigned int));
-   //position += sizeof(unsigned int);	
+   position += sizeof(unsigned int);	
 
    char nodeName[FILENAME_MAX];
    strcpy(nodeName, data + position);

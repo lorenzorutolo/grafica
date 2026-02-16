@@ -1,4 +1,3 @@
-// Author: Niccolo Pasqualetti, Ivan Martinetti, Mattia Pasquini
 #ifndef PERSPECTIVECAMERA_H_INCLUDED
 #define PERSPECTIVECAMERA_H_INCLUDED
 

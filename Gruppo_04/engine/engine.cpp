@@ -110,14 +110,10 @@ bool ENG_API Eng::Base::init(const char* title, unsigned int width, unsigned int
 
    glEnable(GL_DEPTH_TEST); //attiva z buffer
    glEnable(GL_LIGHTING); //attiva le luci
-   glEnable(GL_NORMALIZE);
+   glEnable(GL_NORMALIZE); //
    glEnable(GL_CULL_FACE); //le facce viste non vengono renderizzate
    glEnable(GL_TEXTURE_2D); //permette il texture mapping per i material
    FreeImage_Initialise();
-   glm::vec4 gAmbient(0.1f, 0.1f, 0.1f, 0.1f);
-
-   //glLightModelfv(GL_LIGHT_MODEL_AMBIENT, glm::value_ptr(gAmbient));//li setta alla scena l'illuminazione ambientale se non ci sono luci
-
    glShadeModel(GL_SMOOTH);
 
    // Done:
@@ -140,7 +136,7 @@ bool ENG_API Eng::Base::free()
       return false;
    }
 
-   // Here you can properly dispose of any allocated resource (including third-party dependencies)...
+   // 
    m_render_list.clear();
 
    // Done:
@@ -171,11 +167,6 @@ void ENG_API Eng::Base::renderScene()
 
 }
 
-void ENG_API Eng::Base::loadScene(Node* root)
-{
-   m_render_list.clear();
-   m_scene_graph = root;
-}
 
 void ENG_API Eng::Base::loadScene(const char* file_path, const char* texture_dir) {
 

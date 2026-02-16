@@ -1,4 +1,3 @@
-// Author: Niccolo Pasqualetti, Ivan Martinetti, Mattia Pasquini
 #ifndef ORTOGRAPHICCAMERA_H_INCLUDED
 #define ORTOGRAPHICCAMERA_H_INCLUDED
 

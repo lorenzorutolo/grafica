@@ -1,4 +1,3 @@
-// Author: Niccolo Pasqualetti, Ivan Martinetti, Mattia Pasquini
 
 #define GLM_ENABLE_EXPERIMENTAL
 
