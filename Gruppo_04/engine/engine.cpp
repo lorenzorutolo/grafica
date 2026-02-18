@@ -283,8 +283,7 @@ void ENG_API Eng::Base::registerReshapeCallback(void (*function)(int, int)) {
    glutReshapeFunc(reshapeCallback);
 }
 
-void ENG_API Eng::Base::registerKeyboardCallback(
-   void (*function)(unsigned char, int, int))
+void ENG_API Eng::Base::registerKeyboardCallback(void (*function)(unsigned char, int, int))
 {
    keyboard_function = function;
    glutKeyboardFunc([](unsigned char key, int x, int y) {
@@ -306,19 +305,6 @@ void ENG_API Eng::Base::internalKeyboardCallback(unsigned char key, int x, int y
    glutPostRedisplay();
 }
 
-void ENG_API Eng::Base::toggleLight(Node* light) {
-
-   if (Light* l = dynamic_cast<Light*>(light))
-   {
-      std::cout << "vai" << std::endl;
-      l->toggleLight();
-      return;
-   }
-
-   std::cerr << "[Eng] toggleLight() called on a non-light node\n";
-
-}
-
 void ENG_API Eng::Base::setCamera(PerspectiveCamera* cam)
 {
    currentCamera = cam;
@@ -330,7 +316,6 @@ void  ENG_API Eng::Base::addCamera(PerspectiveCamera* cam)
    if (currentCamera == nullptr)
       currentCamera = cam;
 }
-
 
 void ENG_API Eng::Base::calculateFPS() {
    frameCount++;

@@ -9,10 +9,10 @@
 
 // --- Variabili Globali ---
 // --- Variabili Logica Hanoi ---
-std::vector<Node*> pegs[3]; // Rappresenta i 3 pioli: pegs[0], pegs[1], pegs[2]
+std::vector<Node*> pegs[3]; // Rappresenta i 3 pioli
 int sourcePeg = -1;         // Memorizza il primo tasto premuto (-1 significa "nessuna selezione")
 
-// Parametri di posizionamento (da regolare in base alla tua scena 3ds Max)
+// Parametri di posizionamento
 float CALIBRATED_BASE_HEIGHT = 0.0f;
 float CALIBRATED_DISK_OFFSET = 0.0f;
 
@@ -30,7 +30,7 @@ PerspectiveCamera* cameraFissa = new PerspectiveCamera("FreeCamera", cameraM, 10
 
 // setup nodi luce
 Node* lightBulb = nullptr;
-Node* light = nullptr;
+Node* DeskLight = nullptr;
 SpotLight* lampSpotLight = nullptr;
 Node* oggetto = nullptr;
 
@@ -81,60 +81,56 @@ void moveCameraLocal(const glm::vec3& delta) {
     freeCamera->setLocalMatrix(m);
 }
 
-// serve per resettare il cilindro a visible quando poi switchi cilindro 
+// Ripristina la matrice originale e ferma il lampeggio
 void resetSelectedCylinder() {
     if (selectedCylinder) {
+        // Ripristina la scala originale
         selectedCylinder->setLocalMatrix(originalCylinderMatrix);
-        isBlinkVisible = true;
-        std::cout << "Cilindro resettato allo stato visibile." << std::endl;
+        std::cout << "Reset visuale cilindro." << std::endl;
     }
+    // Resetta le variabili di stato visivo
+    selectedCylinder = nullptr;
+    isBlinkVisible = true;
 }
 
-// seleziona e quindi fa lampeggiare il cilindro corretto 
+// Seleziona il cilindro per il lampeggio
 void selectCylinder(int index) {
     if (index < 0 || index >= 3 || !cylinders[index]) return;
-    // 1. Resetta quello attuale prima di cambiare
+
+    // Se c'era già una selezione, resettala
     resetSelectedCylinder();
-    // 2. Cambia selezione
+
+    // Imposta il nuovo cilindro
     selectedCylinder = cylinders[index];
-    // 3. Salva la matrice originale del nuovo cilindro
     originalCylinderMatrix = selectedCylinder->getLocalMatrix();
-    lastBlinkTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f; // Reset del timer
+    lastBlinkTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 }
 
 //muovere il disco 
 void moveDisk(int from, int to) {
-    // 1. Controllo base
     if (pegs[from].empty()) return;
 
     Node* diskToMove = pegs[from].back();
 
-    // 2. Controllo Hanoi (Regola: disco piccolo su grande)
+    // Controllo Hanoi
     if (!pegs[to].empty()) {
         Node* topDiskDest = pegs[to].back();
-        // Nota: Assicurati che Torus007 sia numericamente > di Torus001 
-        // e che i nomi corrispondano effettivamente alla dimensione.
         if (diskToMove->getName() > topDiskDest->getName()) {
             eng.printText("Mossa illegale: disco grande su piccolo!");
-            sourcePeg = -1; // Importante resettare la selezione per la prossima mossa
+            // Nota: Non serve resettare sourcePeg qui, lo fa la keyboardCallback
             return;
         }
     }
 
-    // 3. Rimuovi il disco dal piolo di partenza
+    // Logica spostamento vettori
     pegs[from].pop_back();
 
-    // 4. CALCOLO ALTEZZA (Logica corretta)
-    // Se il piolo di destinazione ha N dischi, il nuovo disco deve stare alla posizione N.
-    // Esempio: 0 dischi presenti -> posizione 0 (Base)
-    //          1 disco presente  -> posizione 1 (Base + 1*Offset)
     int numDisksAlreadyThere = pegs[to].size();
     float targetHeight = CALIBRATED_BASE_HEIGHT + (numDisksAlreadyThere * CALIBRATED_DISK_OFFSET);
 
-    // 5. Aggiorna il vettore di destinazione
     pegs[to].push_back(diskToMove);
 
-    // 6. Applicazione trasformazione
+    // Applicazione trasformazione fisica
     glm::mat4 m = diskToMove->getLocalMatrix();
     float targetX = cylinders[to]->getLocalMatrix()[3][0];
     float targetZ = cylinders[to]->getLocalMatrix()[3][2];
@@ -144,30 +140,28 @@ void moveDisk(int from, int to) {
     m[3][2] = targetZ;
     diskToMove->setLocalMatrix(m);
 
-    // 7. Reset lampeggio
-    resetSelectedCylinder();
-    selectedCylinder = nullptr;
-    sourcePeg = -1; // Importante resettare la selezione per la prossima mossa
+    // Rimosso resetSelectedCylinder() da qui perché ora è gestito nella input
 }
+
 // --- Logica di Inizializzazione Luci e Posizioni ---
 
 //setup componenti della scena
 void initializeSceneComponents() {
     setupHanoiLogic();
-    if (!light || !oggetto || !cylinders[0]) return;
+    if (!DeskLight || !oggetto || !cylinders[0]) return;
 
-    // posizionare la lampadina nella posizione corretta 
-    // 1. Ottieni la worldMatrix del paralume
+    //posizionare la lampadina nella posizione corretta
+    //Ottieni la worldMatrix del paralume
     glm::mat4 paralumeWorld = oggetto->getWCMatrix();
-    // 2. Ottieni la localMatrix della lampadina
-    glm::mat4 lampLocal = light->getLocalMatrix();
-    // 3. Sovrascrivi la parte della traslazione (colonna 3) della lampadina con quella del paralume
+    //Ottieni la localMatrix della lampadina
+    glm::mat4 lampLocal = DeskLight->getLocalMatrix();
+    //Sovrascrivi la parte della traslazione (colonna 3) della lampadina con quella del paralume
     lampLocal[3] = paralumeWorld[3];
-    light->setLocalMatrix(lampLocal);
+    DeskLight->setLocalMatrix(lampLocal);
 
     // Setup Spotlight della lampada da tavolo
     // 1. Otteniamo le matrici World di entrambi
-    glm::mat4 lampWorldMatrix = light->getWCMatrix();
+    glm::mat4 lampWorldMatrix = DeskLight->getWCMatrix();
     glm::mat4 targetWorldMatrix = cylinders[0]->getWCMatrix();
 
     // 2. Estraiamo le posizioni (colonna 3 della matrice)
@@ -176,7 +170,7 @@ void initializeSceneComponents() {
 
     // 3. Calcoliamo il vettore direzione e lo normalizziamo
     glm::vec3 worldDirection = glm::normalize(targetPos - lampPos);
-    glm::mat3 invRotation = glm::transpose(glm::mat3(light->getWCMatrix()));
+    glm::mat3 invRotation = glm::transpose(glm::mat3(DeskLight->getWCMatrix()));
     glm::vec3 localDirection = invRotation * worldDirection;
 
     // 4. Creazione SpotLight
@@ -188,9 +182,9 @@ void initializeSceneComponents() {
         glm::vec3(1.0f), // Specular
         localDirection,  // Direzione calcolata
         1.0f, 0.0f, 0.0f, // No attenuazione per test
-        15.0f            // Cutoff leggermente più ampio per visibilità
+        10.0f            // Cutoff leggermente più ampio per visibilità
     );
-    light->addChild(lampSpotLight);
+    DeskLight->addChild(lampSpotLight);
 
     // Setup Luce Omni soffitto (lightbulb_01)
     if (lightBulb) {
@@ -206,7 +200,6 @@ void initializeSceneComponents() {
     }
 
     isSceneInitialized = true;
-    std::cout << "Componenti della scena inizializzati correttamente." << std::endl;
 }
 
 //resetta il game alla posizione iniziale
@@ -254,35 +247,49 @@ void resetGame() {
 
 // --- Callbacks ---
 
-void keyboardCallback(unsigned char key, int mouseX, int mouseY)     {
-    if (key >= '1' && key <= '3') {
-        int pegIndex = key - '1'; // Converte '1'-'3' in 0-2
+void keyboardCallback(unsigned char key, int mouseX, int mouseY) {
 
+    // --- LOGICA DI GIOCO (HANOI) ---
+    if (key >= '1' && key <= '3') {
+        int pegIndex = key - '1'; // Converte char '1' in int 0
+
+        // FASE 1: SELEZIONE SORGENTE
         if (sourcePeg == -1) {
-            // Primo tasto premuto: selezione sorgente
             if (pegs[pegIndex].empty()) {
-                std::cout << "Piolo vuoto! Seleziona un altro piolo." << std::endl;
+                eng.printText("Errore: Il piolo selezionato e' vuoto!");
             }
             else {
                 sourcePeg = pegIndex;
-                std::cout << "Sorgente: Piolo " << sourcePeg + 1 << ". Ora premi destinazione." << std::endl;
-                // Opzionale: potresti far lampeggiare il disco selezionato qui
+                std::cout << "Sorgente selezionata: Piolo " << sourcePeg + 1 << std::endl;
+
+                // >>> QUI ATTIVIAMO IL LAMPEGGIO DEL CILINDRO SORGENTE <<<
+                selectCylinder(sourcePeg);
             }
         }
+        // FASE 2: SELEZIONE DESTINAZIONE
         else {
-            // Secondo tasto premuto: selezione destinazione
             int destPeg = pegIndex;
 
+            // Prima di fare qualsiasi mossa, SPEGNIAMO IL LAMPEGGIO
+            resetSelectedCylinder();
+
             if (destPeg == sourcePeg) {
-                std::cout << "Destinazione uguale alla sorgente. Selezione annullata." << std::endl;
+                std::cout << "Selezione annullata (Sorgente == Destinazione)." << std::endl;
             }
             else {
+                // Tenta il movimento
                 moveDisk(sourcePeg, destPeg);
             }
-            sourcePeg = -1; // Reset della sequenza
+
+            // Resetta la logica per la prossima mossa
+            sourcePeg = -1;
         }
+
+        // Return anticipato per evitare che il tasto venga processato dallo switch sotto
+        return;
     }
 
+    // --- COMANDI GENERALI ---
     switch (key) {
     case 'a': case 'A': moveCameraLocal(glm::vec3(-cameraSpeed, 0.0f, 0.0f)); break;
     case 'd': case 'D': moveCameraLocal(glm::vec3(cameraSpeed, 0.0f, 0.0f));  break;
@@ -296,15 +303,17 @@ void keyboardCallback(unsigned char key, int mouseX, int mouseY)     {
         break;
     }
     case 'r': case 'R':
-        resetGame();
+        resetGame(); // resetGame chiamerà resetSelectedCylinder internamente
         break;
-    case '1': selectCylinder(0); break;
-    case '2': selectCylinder(1); break;
-    case '3': selectCylinder(2); break;
+
+        // NOTA: Ho rimosso i case '1', '2', '3' da qui perché andavano in conflitto
+        // con la logica di gioco sopra.
+
     case '0':
+        // Reset manuale di emergenza
         resetSelectedCylinder();
-        selectedCylinder = nullptr;
-        std::cout << "Selezione annullata. Tutti i cilindri visibili." << std::endl;
+        sourcePeg = -1;
+        std::cout << "Selezione resettata manualmente." << std::endl;
         break;
     case 27: exit(0); break;
     }
@@ -398,7 +407,7 @@ int main(int argc, char** argv) {
 
     // Ricerca nodi (non manipoliamo le matrici qui per evitare crash)
     lightBulb = root->searchByName("lightbulb_01");
-    light = root->searchByName("lampadina");
+    DeskLight = root->searchByName("lampadina");
     oggetto = root->searchByName("Oggetto_1");
 
     // cilindri
