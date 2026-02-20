@@ -1,82 +1,62 @@
-CXX = g++
-AR = ar
-LD = g++
-WINDRES = windres
+CXX = cl.exe
+LD = link.exe
 
-INC = -I../engine -I../dependencies/glm/include -I../dependencies/freeglut/include
-CFLAGS = -Wall -std=c++20 -fexceptions
-RCFLAGS = 
-RESINC = 
-LIBDIR = 
-LIB = -lengine
-LDFLAGS = 
+# Aggiunto FREEGLUT_STATIC per dire agli header di non cercare la versione DLL
+INC = /I"..\engine" /I"..\dependencies\glm\include" /I"..\dependencies\freeglut\include"
+CFLAGS = /nologo /W3 /EHsc /std:c++20 /D "FREEGLUT_STATIC"
 
-INC_DEBUG = $(INC)
-CFLAGS_DEBUG = $(CFLAGS) -g -D_DEBUG
-RESINC_DEBUG = $(RESINC)
-RCFLAGS_DEBUG = $(RCFLAGS)
-LIBDIR_DEBUG = $(LIBDIR) -L../engine/bin/Debug
-LIB_DEBUG = $(LIB)
-LDFLAGS_DEBUG = $(LDFLAGS)
-OBJDIR_DEBUG = obj/Debug
-DEP_DEBUG = 
-OUT_DEBUG = bin/Debug/client
+# Aggiungiamo i percorsi di FreeGLUT anche qui, perché gli header lo auto-richiedono
+LIB_DIRS_DEBUG = /LIBPATH:"..\dependencies\freeglut\lib\x64\Debug"
+LIB_DIRS_RELEASE = /LIBPATH:"..\dependencies\freeglut\lib\x64\Release"
 
-INC_RELEASE = $(INC)
-CFLAGS_RELEASE = $(CFLAGS) -O2
-RESINC_RELEASE = $(RESINC)
-RCFLAGS_RELEASE = $(RCFLAGS)
-LIBDIR_RELEASE = $(LIBDIR) -L../engine/bin/Release
-LIB_RELEASE = $(LIB)
-LDFLAGS_RELEASE = $(LDFLAGS) -s
-OBJDIR_RELEASE = obj/Release
-DEP_RELEASE = 
-OUT_RELEASE = bin/Release/client
+# Il client linkerà l'engine + le dipendenze di sistema richieste da FreeGLUT
+LIBS_DEBUG = ..\engine\bin\Debug\engine.lib freeglut_staticd.lib opengl32.lib glu32.lib
+LIBS_RELEASE = ..\engine\bin\Release\engine.lib freeglut_static.lib opengl32.lib glu32.lib
 
-OBJ_DEBUG = $(OBJDIR_DEBUG)/main.o
+# --- DEBUG ---
+# Aggiunto /MDd
+CFLAGS_DEBUG = $(CFLAGS) /Zi /Od /D "_DEBUG" /MDd
+OBJDIR_DEBUG = obj\Debug
+OUTDIR_DEBUG = bin\Debug
+OUT_DEBUG = $(OUTDIR_DEBUG)\client.exe
+OBJ_DEBUG = $(OBJDIR_DEBUG)\main.obj
 
-OBJ_RELEASE = $(OBJDIR_RELEASE)/main.o
+# --- RELEASE ---
+# Aggiunto /MD
+CFLAGS_RELEASE = $(CFLAGS) /O2 /D "NDEBUG" /MD
+OBJDIR_RELEASE = obj\Release
+OUTDIR_RELEASE = bin\Release
+OUT_RELEASE = $(OUTDIR_RELEASE)\client.exe
+OBJ_RELEASE = $(OBJDIR_RELEASE)\main.obj
 
 all: debug release
 
-clean: clean_debug clean_release
+before_debug:
+	@if not exist $(OUTDIR_DEBUG) mkdir $(OUTDIR_DEBUG)
+	@if not exist $(OBJDIR_DEBUG) mkdir $(OBJDIR_DEBUG)
 
-before_debug: 
-	test -d bin/Debug || mkdir -p bin/Debug
-	test -d $(OBJDIR_DEBUG) || mkdir -p $(OBJDIR_DEBUG)
+before_release:
+	@if not exist $(OUTDIR_RELEASE) mkdir $(OUTDIR_RELEASE)
+	@if not exist $(OBJDIR_RELEASE) mkdir $(OBJDIR_RELEASE)
 
-after_debug: 
+# --- TARGET DEBUG ---
+debug: before_debug $(OUT_DEBUG)
 
-debug: before_debug out_debug after_debug
+$(OUT_DEBUG): $(OBJ_DEBUG)
+	$(LD) /nologo /DEBUG /OUT:$(OUT_DEBUG) $(LIB_DIRS_DEBUG) $(OBJ_DEBUG) $(LIBS_DEBUG)
 
-out_debug: before_debug $(OBJ_DEBUG) $(DEP_DEBUG)
-	$(LD) $(LIBDIR_DEBUG) -o $(OUT_DEBUG) $(OBJ_DEBUG)  $(LDFLAGS_DEBUG) $(LIB_DEBUG)
+$(OBJDIR_DEBUG)\main.obj: main.cpp
+	$(CXX) $(CFLAGS_DEBUG) $(INC) /c main.cpp /Fo$(OBJDIR_DEBUG)\main.obj
 
-$(OBJDIR_DEBUG)/main.o: main.cpp
-	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c main.cpp -o $(OBJDIR_DEBUG)/main.o
+# --- TARGET RELEASE ---
+release: before_release $(OUT_RELEASE)
 
-clean_debug: 
-	rm -f $(OBJ_DEBUG) $(OUT_DEBUG)
-	rm -rf bin/Debug
-	rm -rf $(OBJDIR_DEBUG)
+$(OUT_RELEASE): $(OBJ_RELEASE)
+	$(LD) /nologo /OUT:$(OUT_RELEASE) $(LIB_DIRS_RELEASE) $(OBJ_RELEASE) $(LIBS_RELEASE)
 
-before_release: 
-	test -d bin/Release || mkdir -p bin/Release
-	test -d $(OBJDIR_RELEASE) || mkdir -p $(OBJDIR_RELEASE)
+$(OBJDIR_RELEASE)\main.obj: main.cpp
+	$(CXX) $(CFLAGS_RELEASE) $(INC) /c main.cpp /Fo$(OBJDIR_RELEASE)\main.obj
 
-after_release: 
-
-release: before_release out_release after_release
-
-out_release: before_release $(OBJ_RELEASE) $(DEP_RELEASE)
-	$(LD) $(LIBDIR_RELEASE) -o $(OUT_RELEASE) $(OBJ_RELEASE)  $(LDFLAGS_RELEASE) $(LIB_RELEASE)
-
-$(OBJDIR_RELEASE)/main.o: main.cpp
-	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c main.cpp -o $(OBJDIR_RELEASE)/main.o
-
-clean_release: 
-	rm -f $(OBJ_RELEASE) $(OUT_RELEASE)
-	rm -rf bin/Release
-	rm -rf $(OBJDIR_RELEASE)
-
-.PHONY: before_debug after_debug clean_debug before_release after_release clean_release
+clean:
+	@if exist obj rmdir /s /q obj
+	@if exist bin rmdir /s /q bin

@@ -1,17 +1,12 @@
-CXX = g++
-AR = ar
-LD = g++
-WINDRES = windres
+CXX = cl.exe
+LD = link.exe
 
-INC = -I../dependencies/freeglut/include -I../dependencies/glm/include -I../dependencies/glew/include
-CFLAGS = -Wall -std=c++20 -fPIC -m64 -fexceptions
-RCFLAGS = 
-RESINC = 
-LIBDIR = 
-LIB = -lglut -lGL -lGLU -lfreeimage -lGLEW
-LDFLAGS = -m64
+# Aggiunto /D "FREEGLUT_STATIC" per dire a C++ che non stiamo usando una DLL per FreeGLUT
+INC = /I"..\dependencies\freeglut\include" /I"..\dependencies\glm\include" /I"..\dependencies\glew\include" /I"..\dependencies\freeimage\include"
+CFLAGS = /nologo /W3 /EHsc /std:c++20 /D "ENGINE_EXPORTS" /D "FREEGLUT_STATIC"
 
-# Engine sources
+LIBS_COMMON = opengl32.lib glu32.lib glew32.lib FreeImage.lib
+
 SRCS = attenuationLight.cpp \
        camera.cpp \
        directionalLight.cpp \
@@ -29,87 +24,53 @@ SRCS = attenuationLight.cpp \
        spotLight.cpp \
        texture2D.cpp
 
-INC_DEBUG = $(INC)
-CFLAGS_DEBUG = $(CFLAGS) -g -D_DEBUG
-RESINC_DEBUG = $(RESINC)
-RCFLAGS_DEBUG = $(RCFLAGS)
-LIBDIR_DEBUG = $(LIBDIR)
-LIB_DEBUG = $(LIB)
-LDFLAGS_DEBUG = $(LDFLAGS)
-OBJDIR_DEBUG = obj/Debug
-DEP_DEBUG = 
-OUT_DEBUG = bin/Debug/libengine.so
-OBJDIR_TEST = obj/Test
-OUT_TEST = bin/Debug/engine_tests
+# --- DEBUG ---
+# Aggiunto /MDd per allineare la libreria di runtime a quella di FreeImage/FreeGLUT
+CFLAGS_DEBUG = $(CFLAGS) /Zi /Od /D "_DEBUG" /MDd
+LIB_DIRS_DEBUG = /LIBPATH:"..\dependencies\freeglut\lib\x64\Debug" /LIBPATH:"..\dependencies\freeimage\lib\x64\Debug" /LIBPATH:"..\dependencies\glew\lib\Release\x64"
+LIBS_DEBUG = $(LIBS_COMMON) freeglut_staticd.lib
+LDFLAGS_DEBUG = /DLL /DEBUG $(LIB_DIRS_DEBUG)
+OBJDIR_DEBUG = obj\Debug
+OUTDIR_DEBUG = bin\Debug
+OUT_DEBUG = $(OUTDIR_DEBUG)\engine.dll
 
-INC_RELEASE = $(INC)
-CFLAGS_RELEASE = $(CFLAGS) -O2
-RESINC_RELEASE = $(RESINC)
-RCFLAGS_RELEASE = $(RCFLAGS)
-LIBDIR_RELEASE = $(LIBDIR)
-LIB_RELEASE = $(LIB)
-LDFLAGS_RELEASE = $(LDFLAGS) -s
-OBJDIR_RELEASE = obj/Release
-DEP_RELEASE = 
-OUT_RELEASE = bin/Release/libengine.so
-
-OBJ_DEBUG = $(SRCS:%.cpp=$(OBJDIR_DEBUG)/%.o)
-
-OBJ_RELEASE = $(SRCS:%.cpp=$(OBJDIR_RELEASE)/%.o)
+# --- RELEASE ---
+# Aggiunto /MD per la versione Release
+CFLAGS_RELEASE = $(CFLAGS) /O2 /D "NDEBUG" /MD
+LIB_DIRS_RELEASE = /LIBPATH:"..\dependencies\freeglut\lib\x64\Release" /LIBPATH:"..\dependencies\freeimage\lib\x64\Release" /LIBPATH:"..\dependencies\glew\lib\Release\x64"
+LIBS_RELEASE = $(LIBS_COMMON) freeglut_static.lib
+LDFLAGS_RELEASE = /DLL $(LIB_DIRS_RELEASE)
+OBJDIR_RELEASE = obj\Release
+OUTDIR_RELEASE = bin\Release
+OUT_RELEASE = $(OUTDIR_RELEASE)\engine.dll
 
 all: debug release
 
-test: debug before_test $(OUT_TEST)
-	LD_LIBRARY_PATH=bin/Debug ./$(OUT_TEST)
+before_debug:
+	@if not exist $(OUTDIR_DEBUG) mkdir $(OUTDIR_DEBUG)
+	@if not exist $(OBJDIR_DEBUG) mkdir $(OBJDIR_DEBUG)
 
-clean: clean_debug clean_release
+before_release:
+	@if not exist $(OUTDIR_RELEASE) mkdir $(OUTDIR_RELEASE)
+	@if not exist $(OBJDIR_RELEASE) mkdir $(OBJDIR_RELEASE)
 
-before_debug: 
-	test -d bin/Debug || mkdir -p bin/Debug
-	test -d $(OBJDIR_DEBUG) || mkdir -p $(OBJDIR_DEBUG)
+# --- TARGET DEBUG ---
+debug: before_debug $(OUT_DEBUG)
 
-after_debug: 
+$(OUT_DEBUG):
+	$(CXX) $(CFLAGS_DEBUG) $(INC) /c $(SRCS) /Fo"$(OBJDIR_DEBUG)/"
+	$(LD) /nologo $(LDFLAGS_DEBUG) /OUT:$(OUT_DEBUG) /IMPLIB:$(OUTDIR_DEBUG)\engine.lib $(OBJDIR_DEBUG)\*.obj $(LIBS_DEBUG)
 
-debug: before_debug out_debug after_debug
+# --- TARGET RELEASE ---
+release: before_release $(OUT_RELEASE)
 
-out_debug: before_debug $(OBJ_DEBUG) $(DEP_DEBUG)
-	$(LD) -shared $(LIBDIR_DEBUG) $(OBJ_DEBUG)  -o $(OUT_DEBUG) $(LDFLAGS_DEBUG) $(LIB_DEBUG)
+$(OUT_RELEASE):
+	$(CXX) $(CFLAGS_RELEASE) $(INC) /c $(SRCS) /Fo"$(OBJDIR_RELEASE)/"
+	$(LD) /nologo $(LDFLAGS_RELEASE) /OUT:$(OUT_RELEASE) /IMPLIB:$(OUTDIR_RELEASE)\engine.lib $(OBJDIR_RELEASE)\*.obj $(LIBS_RELEASE)
 
-$(OBJDIR_DEBUG)/%.o: %.cpp
-	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -c $< -o $@
+clean:
+	@if exist obj rmdir /s /q obj
+	@if exist bin rmdir /s /q bin
 
-before_test:
-	test -d $(OBJDIR_TEST) || mkdir -p $(OBJDIR_TEST)
-
-$(OUT_TEST): $(OBJDIR_TEST)/engine_tests.o $(OUT_DEBUG)
-	$(LD) $(LIBDIR_DEBUG) -Lbin/Debug $(OBJDIR_TEST)/engine_tests.o -o $(OUT_TEST) $(LDFLAGS_DEBUG) $(LIB_DEBUG) -lengine -Wl,-rpath,'$$ORIGIN'
-
-$(OBJDIR_TEST)/engine_tests.o: tests/engine_tests.cpp
-	$(CXX) $(CFLAGS_DEBUG) $(INC_DEBUG) -I. -c tests/engine_tests.cpp -o $(OBJDIR_TEST)/engine_tests.o
-
-clean_debug: 
-	rm -f $(OBJ_DEBUG) $(OUT_DEBUG) $(OUT_TEST) $(OBJDIR_TEST)/engine_tests.o
-	rm -rf bin/Debug
-	rm -rf $(OBJDIR_DEBUG)
-	rm -rf $(OBJDIR_TEST)
-
-before_release: 
-	test -d bin/Release || mkdir -p bin/Release
-	test -d $(OBJDIR_RELEASE) || mkdir -p $(OBJDIR_RELEASE)
-
-after_release: 
-
-release: before_release out_release after_release
-
-out_release: before_release $(OBJ_RELEASE) $(DEP_RELEASE)
-	$(LD) -shared $(LIBDIR_RELEASE) $(OBJ_RELEASE)  -o $(OUT_RELEASE) $(LDFLAGS_RELEASE) $(LIB_RELEASE)
-
-$(OBJDIR_RELEASE)/%.o: %.cpp
-	$(CXX) $(CFLAGS_RELEASE) $(INC_RELEASE) -c $< -o $@
-
-clean_release: 
-	rm -f $(OBJ_RELEASE) $(OUT_RELEASE)
-	rm -rf bin/Release
-	rm -rf $(OBJDIR_RELEASE)
-
-.PHONY: before_debug after_debug clean_debug before_release after_release clean_release before_test test
+test:
+	@echo Test non ancora configurato per Windows nativo.

@@ -17,7 +17,7 @@
 // EXPORT API //
 ///////////////
 
-#ifdef _WINDOWS               // ? questa macro è giusta su Windows
+#ifdef _WIN32               // ? questa macro è giusta su Windows
 #ifdef ENGINE_EXPORTS
 #define ENG_API __declspec(dllexport)
 #else

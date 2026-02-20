@@ -1,51 +1,40 @@
-MAKE = make
-
-PACKAGE_DIR := dist
-PACKAGE_NAME := release
-PACKAGE_STAGE := $(PACKAGE_DIR)/$(PACKAGE_NAME)
-PACKAGE_ASSETS := $(PACKAGE_DIR)/assets
-PACKAGE_ZIP := $(PACKAGE_DIR)/$(PACKAGE_NAME).zip
-ASSETS_SRC := assets
+MAKE = nmake
 
 all: build_engine build_client
 
 build_engine: 
-	$(MAKE) -C engine all
+	cd engine && $(MAKE) all && cd ..
 
 build_client: build_engine
-	$(MAKE) -C client all
+	cd client && $(MAKE) all && cd ..
 
-package: $(PACKAGE_ZIP)
-
-$(PACKAGE_ZIP): build_client
-	rm -rf $(PACKAGE_STAGE) $(PACKAGE_ASSETS) $(PACKAGE_ZIP)
-	mkdir -p $(PACKAGE_STAGE)
-	mkdir -p $(PACKAGE_ASSETS)
-	cp -r $(ASSETS_SRC)/* $(PACKAGE_ASSETS)/
-	cp client/bin/Release/client $(PACKAGE_STAGE)/
-	cp engine/bin/Release/libengine.so $(PACKAGE_STAGE)/
-	cp client/obj/Release/main.o $(PACKAGE_STAGE)/client.o
-	cp engine/obj/Release/engine.o $(PACKAGE_STAGE)/engine.o
-	echo '#!/usr/bin/env bash' > $(PACKAGE_STAGE)/run.sh
-	echo 'set -euo pipefail' >> $(PACKAGE_STAGE)/run.sh
-	echo 'SCRIPT_DIR="$$(cd "$$(dirname "$$0")" && pwd)"' >> $(PACKAGE_STAGE)/run.sh
-	echo 'export LD_LIBRARY_PATH="$$SCRIPT_DIR:$${LD_LIBRARY_PATH:-}"' >> $(PACKAGE_STAGE)/run.sh
-	echo '"$$SCRIPT_DIR/client" "$$@"' >> $(PACKAGE_STAGE)/run.sh
-	chmod +x $(PACKAGE_STAGE)/run.sh
-	cd $(PACKAGE_DIR) && zip -r $(PACKAGE_NAME).zip $(PACKAGE_NAME) assets
+package: build_client
+	if exist dist\release rmdir /s /q dist\release
+	if exist dist\assets rmdir /s /q dist\assets
+	if exist dist\release.zip del /q dist\release.zip
+	if not exist dist mkdir dist
+	if not exist dist\release mkdir dist\release
+	if not exist dist\assets mkdir dist\assets
+	xcopy /E /I /Y assets dist\assets
+	copy /Y client\bin\Release\client.exe dist\release
+	copy /Y engine\bin\Release\engine.dll dist\release
+	copy /Y client\obj\Release\main.obj dist\release\client.obj
+	copy /Y engine\obj\Release\engine.obj dist\release\engine.obj
+	echo @echo off > dist\release\run.bat
+	echo set PATH=%%~dp0;%%PATH%% >> dist\release\run.bat
+	echo "%%~dp0client.exe" %%* >> dist\release\run.bat
+	cd dist && tar -a -c -f release.zip release assets && cd ..
 
 clean: clean_engine clean_client clean_package
 
 clean_package:
-	rm -rf $(PACKAGE_DIR)
+	if exist dist rmdir /s /q dist
 
 clean_engine: 
-	$(MAKE) -C engine clean
+	cd engine && $(MAKE) clean && cd ..
 
 clean_client: 
-	$(MAKE) -C client clean
+	cd client && $(MAKE) clean && cd ..
 
 test:
-	$(MAKE) -C engine test
-
-.PHONY: clean_engine clean_client test package clean_package
+	cd engine && $(MAKE) test && cd ..

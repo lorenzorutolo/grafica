@@ -208,7 +208,7 @@ void Eng::displayCallback() {
    // SWITCH TO 2D RENDERING
    glDisable(GL_LIGHTING); 
    glDisable(GL_TEXTURE_2D); //si sposta in 2d per stampare le scritte
-
+   glColor3f(1.0f, 1.0f, 1.0f);
    // Set orthographic projection:
    glMatrixMode(GL_PROJECTION);
    glm::mat4 ortho;

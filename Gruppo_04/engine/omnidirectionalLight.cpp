@@ -21,6 +21,10 @@ ENG_API OmniDirectionalLight::OmniDirectionalLight(const std::string& name, glm:
 
 void ENG_API OmniDirectionalLight::render(glm::mat4 M, const glm::mat4& C)
 {
+	if (!isOn) {
+		glDisable(GL_LIGHT0 + m_light_id);
+		return;
+	}
 	glm::vec4 position = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	float cutoff = 180.0f;		//Special Value
 

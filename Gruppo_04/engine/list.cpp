@@ -101,7 +101,7 @@ void ENG_API RenderList::render(glm::mat4 view)
             std::string name = mesh->getName();
 
             //Escludi oggetti che non devono proiettare ombra a terra
-            if (name == "w" || name == "C-Ext001" || name == "Plane007")
+            if (name == "Box001" || name == "Box002" || name == "Plane007" || name == "Box003" || name == "Box004")
                 continue;
 
             glm::mat4 lift = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.01f, 0.0f));
