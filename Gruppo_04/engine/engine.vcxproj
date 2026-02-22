@@ -98,7 +98,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>..\dependencies\freeglut\lib\$(Platform)\$(Configuration);$(SolutionDir)dependencies\freeimage\lib\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>FreeImage.lib;freeglut_staticd.lib</AdditionalDependencies>
+      <AdditionalDependencies>FreeImage.lib;freeglut_staticd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -120,8 +120,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>..\dependencies\freeglut\lib\$(Platform)\$(Configuration);$(SolutionDir)dependencies\freeimage\lib\$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>FreeImage.lib;freeglut_static.lib</AdditionalDependencies>
-      <AdditionalOptions>/LIBPATH: %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalDependencies>FreeImage.lib;freeglut_static.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

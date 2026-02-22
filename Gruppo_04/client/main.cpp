@@ -32,6 +32,7 @@ PerspectiveCamera* cameraFissa = new PerspectiveCamera("FreeCamera", cameraM, 10
 Node* lightBulb = nullptr;
 Node* DeskLight = nullptr;
 SpotLight* lampSpotLight = nullptr;
+OmniDirectionalLight* myOmni = nullptr; // <--- AGGIUNGI QUESTO
 Node* oggetto = nullptr;
 
 // cilindri
@@ -116,7 +117,8 @@ void moveDisk(int from, int to) {
     if (!pegs[to].empty()) {
         Node* topDiskDest = pegs[to].back();
         if (diskToMove->getName() > topDiskDest->getName()) {
-            eng.printText("Mossa illegale: disco grande su piccolo!");
+            eng.printText("non puoi posizionare un");
+            eng.printText("disco grande su piccolo!");
             // Nota: Non serve resettare sourcePeg qui, lo fa la keyboardCallback
             return;
         }
@@ -176,25 +178,25 @@ void initializeSceneComponents() {
     // 4. Creazione SpotLight
     lampSpotLight = new SpotLight(
         "LampDeskLight",
-        glm::mat4(1.0f), // Matrice locale identità (posizione bulbo)
-        glm::vec3(0.1f), // Ambient
-        glm::vec3(0.0f, 0.0f, 1.0f), // Diffuse blu
-        glm::vec3(1.0f), // Specular
-        localDirection,  // Direzione calcolata
-        1.0f, 0.0f, 0.0f, // No attenuazione per test
-        10.0f            // Cutoff leggermente più ampio per visibilità
+        glm::mat4(1.0f),
+        glm::vec3(0.2f),             // Ambient leggermente alzato (da 0.1 a 0.2)
+        glm::vec3(0.0f, 0.0f, 3.0f), // Diffuse blu molto più intenso (da 1.0 a 3.0)
+        glm::vec3(2.0f),             // Specular aumentato per riflessi più vividi
+        localDirection,
+        1.0f, 0.0f, 0.0f,
+        15.0f
     );
     DeskLight->addChild(lampSpotLight);
 
     // Setup Luce Omni soffitto (lightbulb_01)
     if (lightBulb) {
-        OmniDirectionalLight* myOmni = new OmniDirectionalLight(
+        myOmni = new OmniDirectionalLight(
             "PowerfulOmni",
             glm::mat4(1.0f),
-            glm::vec3(0.2f),            // Un po' di Ambient aiuta a schiarire le ombre nere
-            glm::vec3(1.5f, 1.5f, 1.5f), // Diffuse sopra 1.0
-            glm::vec3(1.0f, 1.0f, 1.0f),
-            1.0f, 0.0f, 0.0f             // No attenuazione
+            glm::vec3(0.1f),             // Ambient ridotto (da 0.2 a 0.1)
+            glm::vec3(0.8f, 0.8f, 0.8f), // Diffuse abbassato (da 1.5 a 0.8) per non accecare
+            glm::vec3(0.8f, 0.8f, 0.8f), // Specular proporzionalmente ammorbidito
+            1.0f, 0.0f, 0.0f
         );
         lightBulb->addChild(myOmni);
     }
@@ -213,7 +215,7 @@ void resetGame() {
 
     // 2. Re-inserisci i dischi nel primo piolo (pegs[0]) e spostali fisicamente
     // Usiamo lo stesso ordine della setupHanoiLogic (Torus001 -> Torus007)
-    for (int i = 1; i <= 7; i++) {
+    for (int i = 7; i >= 1; i--) {
         std::string name = "Torus00" + std::to_string(i);
         Node* disk = root->searchByName(name.c_str());
 
@@ -303,14 +305,17 @@ void keyboardCallback(unsigned char key, int mouseX, int mouseY) {
         break;
     }
     case 'r': case 'R':
-        resetGame(); // resetGame chiamerà resetSelectedCylinder internamente
+        resetGame(); 
         break;
-
-        // NOTA: Ho rimosso i case '1', '2', '3' da qui perché andavano in conflitto
-        // con la logica di gioco sopra.
-
+    case 'l': case 'L': 
+        if (myOmni) {
+            myOmni->toggleLight();
+            if (myOmni->get_ambient() == glm::vec3(0.0f)) { // un trucco per sapere se è off, oppure stampi e basta
+                std::cout << "Luce Omnidirezionale commutata." << std::endl;
+            }
+        }
+        break;
     case '0':
-        // Reset manuale di emergenza
         resetSelectedCylinder();
         sourcePeg = -1;
         std::cout << "Selezione resettata manualmente." << std::endl;
@@ -389,7 +394,7 @@ int main(int argc, char** argv) {
     eng.registerReshapeCallback(reshapeCallback);
     eng.registerSpecialCallback(specialCallback);
 
-    // 2. Setup Camera
+    //Setup Camera
     glm::vec3 camPos = glm::vec3(-55.0f, 35.0f, 0.0f);
     glm::mat4 cameraMatrix = glm::translate(glm::mat4(1.0f), camPos);
     cameraMatrix = glm::rotate(cameraMatrix, glm::radians(270.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -397,7 +402,7 @@ int main(int argc, char** argv) {
     eng.addCamera(freeCamera);
     eng.setCamera(freeCamera);
 
-    // 3. Caricamento Scena
+    //Caricamento Scena
     eng.loadScene("../assets/scena.ovo", "../assets/");
     root = eng.getRoot();
     if (!root) {
@@ -405,7 +410,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    // Ricerca nodi (non manipoliamo le matrici qui per evitare crash)
+    // Ricerca nodi
     lightBulb = root->searchByName("lightbulb_01");
     DeskLight = root->searchByName("lampadina");
     oggetto = root->searchByName("Oggetto_1");
@@ -415,11 +420,14 @@ int main(int argc, char** argv) {
     cylinders[1] = root->searchByName("Cylinder002");
     cylinders[2] = root->searchByName("Cylinder003");
 
-    // 5. Avvio Engine
-    eng.printText("WASD: Muovi Camera | Frecce: Ruota Camera");
+    //Avvio Engine
+    eng.printText("WASD: Muovi Camera");
+    eng.printText("Frecce: Ruota Camera");
     eng.printText("Premi R per resettare il gioco");
-
-
+    eng.printText("Premi T per telecamera fissa");
+    eng.printText("Premi T per telecamera libera");
+    eng.printText("Premi L per spegnere la luce");
+    eng.printText("Premi L per accendere la luce");
 
     // Il primo update calcola le matrici, permettendo l'inizializzazione nel displayCallback
     eng.update();
